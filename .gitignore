@@ -1,0 +1,4 @@
+node_modules
+dist
+text.json
+.wrangler
