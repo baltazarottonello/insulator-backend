@@ -7,7 +7,7 @@ import { env } from "cloudflare:workers";
 import { createClient } from "@supabase/supabase-js";
 
 export interface AuthenticatedRequest extends ExpressRequest {
-  userId?: string;
+  requesterUserId?: string;
 }
 
 export const requireAuth = async (
@@ -40,7 +40,7 @@ export const requireAuth = async (
       return res.status(401).json({ error: "Token inválido o expirado" });
     }
 
-    req.userId = user.id;
+    req.requesterUserId = user.id;
     next();
   } catch (error) {
     return res.status(401).json({ error: "Error de autenticación" });
