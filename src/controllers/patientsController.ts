@@ -7,7 +7,7 @@ import { env } from "cloudflare:workers";
 const getPatientByEmail = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const email = req.query.email;
-    const medicUserId = req.userId;
+    const medicUserId = req.requesterUserId;
 
     if (!email) {
       return res
@@ -88,7 +88,7 @@ const getAllPatients = async (req: AuthenticatedRequest, res: Response) => {};
 
 const getParams = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const userId = req.userId;
+    const userId = req.requesterUserId;
 
     //@ts-ignore
     const supabaseUrl = env.SUPABASE_URL!;
@@ -144,7 +144,7 @@ const setParams = async (req: AuthenticatedRequest, res: Response) => {
     const body = req.body;
     const patientId = body.patientId;
     const { ratio, sensitivity, targetGlucose } = body.parameters;
-    const medicUserId = req.userId;
+    const medicUserId = req.requesterUserId;
 
     if (!patientId) {
       return res.status(400).json({ error: "El id del paciente es requerido" });
