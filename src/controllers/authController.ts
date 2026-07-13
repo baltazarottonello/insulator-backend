@@ -86,7 +86,6 @@ const login = async (req: Request, res: Response) => {
       roles: roles,
     });
   } catch (error: any) {
-    console.log(error);
     return res
       .status(error.status || 401)
       .json({ error: error.message || "Unauthorized" });

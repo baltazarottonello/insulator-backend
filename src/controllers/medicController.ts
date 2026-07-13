@@ -55,7 +55,6 @@ const getPatients = async (req: AuthenticatedRequest, res: Response) => {
 
     return res.status(200).json(patientsData);
   } catch (error: any) {
-    console.log(error);
     return res
       .status(error.status || 500)
       .json({ error: error.message || "Server error" });
@@ -86,13 +85,11 @@ const checkUserAvailability = async (
         "Error al consultar el usuario"
       ) as CustomError;
       error.status = 500;
-      console.log(availabilityQueryError.details);
       throw error;
     }
 
     return res.status(200).json(availabilityData);
   } catch (error: any) {
-    console.log(error);
     return res
       .status(error.status || 500)
       .json({ error: error.message || "Server error" });
@@ -138,19 +135,76 @@ const assignPatient = async (req: AuthenticatedRequest, res: Response) => {
         "Error al asignar usuario como paciente"
       ) as CustomError;
       error.status = 500;
-      console.log(assignPatientQueryError.details);
       throw error;
     }
 
     return res.status(200).json(assignPatientData);
   } catch (error: any) {
-    console.log(error);
     return res
       .status(error.status || 500)
       .json({ error: error.message || "Server error" });
   }
 };
 
-export { getPatients, checkUserAvailability, assignPatient };
+const getPatientParamsHistory = async (req: Request, res: Response) => {
+  try {
+    const patientId = req.query.id;
+
+    //@ts-ignore
+    const supabaseUrl = env.SUPABASE_URL!;
+    //@ts-ignore
+    const supabaseSecretKey = env.SUPABASE_SECRET_KEY!;
+    const supabaseAdmin = createClient(supabaseUrl, supabaseSecretKey);
+
+    const { data: patientParamsHistoryData, error: patientParamsHistoryError } =
+      await supabaseAdmin.rpc("get_patient_params_history", {
+        param_patient_id: patientId,
+      });
+
+    if (patientParamsHistoryError) {
+      const error: CustomError = new Error(
+        "Error al obtener historial de los parametros del paciente"
+      ) as CustomError;
+      error.status = 500;
+      throw error;
+    }
+
+    const groupParamsRegisters = (row: PatientParamsHistoryRow) => {
+      return {
+        sensitivity: row.out_sensitivity,
+        ratio: row.out_ratio,
+        targetGlucose: row.out_target_glucose,
+        createdAt: row.out_created_at,
+        isActive: row.out_is_active,
+      };
+    };
+
+    const result = {
+      patientId: patientParamsHistoryData[0].out_patient_id,
+      history: patientParamsHistoryData.map(groupParamsRegisters),
+    };
+
+    return res.status(200).json(result);
+  } catch (error: any) {
+    return res
+      .status(error.status || 500)
+      .json({ error: error.message || "Server error" });
+  }
+};
+
+export {
+  getPatients,
+  checkUserAvailability,
+  assignPatient,
+  getPatientParamsHistory,
+};
 
 type CustomError = { status: number } & Error;
+
+type PatientParamsHistoryRow = {
+  out_sensitivity: number;
+  out_ratio: number;
+  out_target_glucose: number;
+  out_created_at: string;
+  out_is_active: boolean;
+};

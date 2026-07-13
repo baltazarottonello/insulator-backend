@@ -83,9 +83,6 @@ const getPatientByEmail = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
-//TODO: implement
-const getAllPatients = async (req: AuthenticatedRequest, res: Response) => {};
-
 const getParams = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.requesterUserId;
@@ -219,4 +216,4 @@ const setParams = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
-export { getPatientByEmail, getAllPatients, getParams, setParams };
+export { getPatientByEmail, getParams, setParams };
