@@ -8,7 +8,7 @@ import {
 
 const router: Router = express.Router();
 
-//*DEPRECATED*//
+//*DEPRECATED*// --> Borrar cuando la app este en Play Store, para asegurarnos que todos los usuarios tienen la misma version.
 router.get("/", requireAuth, getPatientByEmail);
 
 router.get("/params", requireAuth, getParams);
