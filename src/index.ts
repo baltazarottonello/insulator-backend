@@ -1,7 +1,8 @@
 import { httpServerHandler } from "cloudflare:node";
 import express from "express";
 import { verifyAppHeader } from "./middleware/headers.js";
-import patientRoutes from "./routes/patientsRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+import patientRoutes from "./routes/patientRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import medicRoutes from "./routes/medicRoutes.js";
 
@@ -11,6 +12,7 @@ app.use(express.json());
 app.use(verifyAppHeader);
 
 app.use("/auth", authRoutes);
+app.use("/user", userRoutes);
 app.use("/patient", patientRoutes);
 app.use("/medic", medicRoutes);
 
