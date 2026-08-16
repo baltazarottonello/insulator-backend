@@ -1,7 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { env } from "cloudflare:workers";
-import type { Response } from "express";
+import type { Request, Response } from "express";
 import type { AuthenticatedRequest } from "../middleware/requireAuth.js";
+import type { CustomError } from "../types/customError.js";
 
 const loadDose = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -23,13 +24,9 @@ const loadDose = async (req: AuthenticatedRequest, res: Response) => {
     //@ts-ignore
     const supabaseUrl = env.SUPABASE_URL!;
     //@ts-ignore
-    const supabaseKey = env.SUPABASE_ANON_KEY!;
-    //@ts-ignore
     const supabaseSecretKey = env.SUPABASE_SECRET_KEY!;
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseSecretKey);
-
-    const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
     const { data: loadDoseData, error: loadDoseError } =
       await supabaseAdmin.rpc("insert_dose", {
@@ -64,6 +61,72 @@ const loadDose = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
-export { loadDose };
+const updateProfileData = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.requesterUserId;
 
-type CustomError = { status: number } & Error;
+    const { firstName, lastName } = req.body;
+
+    //@ts-ignore
+    const supabaseUrl = env.SUPABASE_URL!;
+    //@ts-ignore
+    const supabaseSecretKey = env.SUPABASE_SECRET_KEY!;
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseSecretKey);
+
+    const { data: updateProfileData, error: updateProfileError } =
+      await supabaseAdmin.rpc("update_profile_data", {
+        param_user_id: userId,
+        param_first_name: firstName,
+        param_last_name: lastName,
+      });
+
+    if (updateProfileError) {
+      const error: CustomError = new Error(
+        "Error al actualizar datos del perfil"
+      ) as CustomError;
+      error.status = 500;
+      throw error;
+    }
+
+    const [{ out_user_id }] = updateProfileData;
+
+    return res.status(200).json({ userId: out_user_id });
+  } catch (error: any) {
+    return res
+      .status(error.status || 401)
+      .json({ error: error.message || "Unauthorized" });
+  }
+};
+
+const deleteUserData = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.requesterUserId;
+
+    //@ts-ignore
+    const supabaseUrl = env.SUPABASE_URL!;
+    //@ts-ignore
+    const supabaseSecretKey = env.SUPABASE_SECRET_KEY!;
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseSecretKey);
+
+    const { data: deleteUserData, error: deleteUserError } =
+      await supabaseAdmin.rpc("delete_user_data", { param_user_id: userId });
+
+    if (deleteUserError) {
+      const error: CustomError = new Error(
+        "Error al eliminar usuario"
+      ) as CustomError;
+      error.status = 500;
+      throw error;
+    }
+
+    return res.sendStatus(204);
+  } catch (error: any) {
+    return res
+      .status(error.status || 401)
+      .json({ error: error.message || "Unauthorized" });
+  }
+};
+
+export { loadDose, updateProfileData, deleteUserData };

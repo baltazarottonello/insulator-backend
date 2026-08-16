@@ -3,6 +3,11 @@ import { getRoles } from "../utils/queryRoles.js";
 import { env } from "cloudflare:workers";
 import type { Request, Response } from "express";
 import type { AuthenticatedRequest } from "../middleware/requireAuth.js";
+import type {
+  PatientDoseHistoryRow,
+  PatientParamsHistoryRow,
+} from "../types/patient.js";
+import type { CustomError } from "../types/customError.js";
 
 const getPatients = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -10,8 +15,6 @@ const getPatients = async (req: AuthenticatedRequest, res: Response) => {
 
     //@ts-ignore
     const supabaseUrl = env.SUPABASE_URL!;
-    //@ts-ignore
-    const supabaseKey = env.SUPABASE_ANON_KEY!;
     //@ts-ignore
     const supabaseSecretKey = env.SUPABASE_SECRET_KEY!;
 
@@ -268,27 +271,4 @@ export {
   assignPatient,
   getPatientParamsHistory,
   getPatientDoseHistory,
-};
-
-type CustomError = { status: number } & Error;
-
-type PatientParamsHistoryRow = {
-  out_sensitivity: number;
-  out_ratio: number;
-  out_target_glucose: number;
-  out_created_at: string;
-  out_is_active: boolean;
-};
-
-type PatientDoseHistoryRow = {
-  out_blood_glucose: number;
-  out_carbs: number;
-  out_ratio: number;
-  out_sensitivity: number;
-  out_target_glucose: number;
-  out_dose_correction: number;
-  out_food_dose: number;
-  out_dose: number;
-  out_observations: string;
-  out_created_at: string;
 };

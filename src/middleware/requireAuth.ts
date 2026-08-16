@@ -28,13 +28,13 @@ export const requireAuth = async (
     //@ts-ignore
     const supabaseUrl = env.SUPABASE_URL;
     //@ts-ignore
-    const supabaseKey = env.SUPABASE_SECRET_KEY;
+    const supabaseSecretKey = env.SUPABASE_SECRET_KEY!;
 
-    const supabaseClient = createClient(supabaseUrl, supabaseKey)!;
+    const supabaseAdmin = createClient(supabaseUrl, supabaseSecretKey);
     const {
       data: { user },
       error,
-    } = await supabaseClient.auth.getUser(token);
+    } = await supabaseAdmin.auth.getUser(token);
 
     if (error || !user) {
       return res.status(401).json({ error: "Token inválido o expirado" });
