@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { getRoles } from "../utils/queryRoles.js";
 import { env } from "cloudflare:workers";
 import type { Request, Response } from "express";
+import type { CustomError } from "../types/customError.js";
 
 const login = async (req: Request, res: Response) => {
   try {
@@ -27,48 +28,53 @@ const login = async (req: Request, res: Response) => {
       token: token,
     });
 
-    if (error) throw error;
+    if (error) {
+      const error: CustomError = new Error(
+        "Error autenticando con Google"
+      ) as CustomError;
+      error.status = 500;
+      throw error;
+    }
 
     const email = data.user.email;
     const fullName = data.user.user_metadata.full_name || "";
+    const nameParts = fullName.trim().split(/\s+/);
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ") || "";
     const userId = data.user.id;
 
-    if (email) {
-      const { data: existingUser, error: checkError } = await supabaseAdmin
-        .from("users")
-        .select("email")
-        .eq("email", email)
-        .maybeSingle();
+    const { data: existingUser, error: checkError } = await supabaseAdmin
+      .from("users")
+      .select("*")
+      .eq("email", email)
+      .maybeSingle();
 
-      if (checkError) {
-        console.error("Error al verificar usuario:", checkError);
-        throw checkError;
-      }
+    if (checkError) {
+      console.log(checkError);
+      const error: CustomError = new Error(
+        "Error al verificar usuario"
+      ) as CustomError;
+      error.status = 500;
+      throw error;
+    }
 
-      if (!existingUser) {
-        const nameParts = fullName.trim().split(/\s+/);
+    if (!existingUser) {
+      const { error: insertError } = await supabaseAdmin.from("users").insert([
+        {
+          id: userId,
+          email: email,
+          name: firstName,
+          last_name: lastName,
+        },
+      ]);
 
-        const firstName = nameParts[0] || "";
-
-        const lastName = nameParts.slice(1).join(" ") || "";
-
-        const { error: insertError } = await supabaseAdmin
-          .from("users")
-          .insert([
-            {
-              id: userId,
-              email: email,
-              name: firstName,
-              last_name: lastName,
-            },
-          ]);
-
-        if (insertError) {
-          const errorMsg = "Error insertando usuario:";
-          console.error(errorMsg, insertError);
-          const customError = { ...insertError, code: 500, message: errorMsg };
-          throw customError;
-        }
+      if (insertError) {
+        console.log(insertError);
+        const error: CustomError = new Error(
+          "Error insertando usuario"
+        ) as CustomError;
+        error.status = 500;
+        throw error;
       }
     }
 
@@ -82,6 +88,8 @@ const login = async (req: Request, res: Response) => {
         email: data.user.email,
         avatar: data.user.user_metadata.avatar_url,
         fullName: data.user.user_metadata.full_name,
+        firstName: existingUser ? existingUser.name : firstName,
+        lastName: existingUser ? existingUser.last_name : lastName,
       },
       roles: roles,
     });
