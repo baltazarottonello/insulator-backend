@@ -18,3 +18,11 @@ export type PatientDoseHistoryRow = {
   out_observations: string;
   out_created_at: string;
 };
+
+export type PatientMedicRow = {
+  out_medic_id: string;
+  out_name: string;
+  out_last_name: string;
+  out_email: string;
+  out_medic_since: string;
+};

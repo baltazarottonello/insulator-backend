@@ -2,6 +2,8 @@ import { createClient } from "@supabase/supabase-js";
 import type { AuthenticatedRequest } from "../middleware/requireAuth.js";
 import type { Response } from "express";
 import { env } from "cloudflare:workers";
+import type { PatientMedicRow } from "../types/patient.js";
+import type { CustomError } from "../types/customError.js";
 
 //TODO: this method should be in medic controllers
 const getPatientByEmail = async (req: AuthenticatedRequest, res: Response) => {
@@ -136,6 +138,7 @@ const getParams = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
+//TODO : USE RPC
 const setParams = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const body = req.body;
@@ -216,4 +219,110 @@ const setParams = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
-export { getPatientByEmail, getParams, setParams };
+const getMedics = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.requesterUserId;
+
+    //@ts-ignore
+    const supabaseUrl = env.SUPABASE_URL!;
+    //@ts-ignore
+    const supabaseSecretKey = env.SUPABASE_SECRET_KEY!;
+    const supabaseAdmin = createClient(supabaseUrl, supabaseSecretKey);
+
+    const { data: patientData, error: patientDataError } =
+      await supabaseAdmin.rpc("get_patient_id_from_user_id", {
+        param_user_id: userId,
+      });
+
+    if (patientDataError) {
+      const error: CustomError = new Error(
+        "Error al obtener id de paciente"
+      ) as CustomError;
+      error.status = 404;
+      throw error;
+    }
+
+    const patientId = patientData?.[0]?.patient_id;
+
+    const { data: medicsData, error: medicsDataError } =
+      await supabaseAdmin.rpc("get_patient_medics", {
+        param_patient_id: patientId,
+      });
+
+    if (medicsDataError) {
+      const error: CustomError = new Error(
+        "Error al obtener médicos"
+      ) as CustomError;
+      error.status = 404;
+      throw error;
+    }
+
+    const response = medicsData.map((medic: PatientMedicRow) => {
+      return {
+        medic_id: medic.out_medic_id,
+        name: medic.out_name,
+        last_name: medic.out_last_name,
+        email: medic.out_email,
+        medic_since: medic.out_medic_since,
+      };
+    });
+
+    return res.status(200).json(response);
+  } catch (error: any) {
+    console.log(error);
+    return res
+      .status(500)
+      .json({ error: error.message || "Internal Server Error" });
+  }
+};
+
+const unlinkMedic = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.requesterUserId;
+    const medicId = req.query.id;
+
+    //@ts-ignore
+    const supabaseUrl = env.SUPABASE_URL!;
+    //@ts-ignore
+    const supabaseSecretKey = env.SUPABASE_SECRET_KEY!;
+    const supabaseAdmin = createClient(supabaseUrl, supabaseSecretKey);
+
+    const { data: patientData, error: patientDataError } =
+      await supabaseAdmin.rpc("get_patient_id_from_user_id", {
+        param_user_id: userId,
+      });
+
+    if (patientDataError) {
+      const error: CustomError = new Error(
+        "Error al obtener id de paciente"
+      ) as CustomError;
+      error.status = 404;
+      throw error;
+    }
+
+    const patientId = patientData?.[0]?.patient_id;
+
+    const { data: unlinkMedicData, error: unlinkMedicDataError } =
+      await supabaseAdmin.rpc("unlink_medic", {
+        param_patient_id: patientId,
+        param_medic_id: medicId,
+      });
+
+    if (unlinkMedicDataError) {
+      const error: CustomError = new Error(
+        "Error al desvincular médico"
+      ) as CustomError;
+      error.status = 404;
+      throw error;
+    }
+
+    return res.status(200).send();
+  } catch (error: any) {
+    console.log(error);
+    return res
+      .status(500)
+      .json({ error: error.message || "Internal Server Error" });
+  }
+};
+
+export { getPatientByEmail, getParams, setParams, getMedics, unlinkMedic };

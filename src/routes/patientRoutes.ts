@@ -4,6 +4,8 @@ import {
   getPatientByEmail,
   getParams,
   setParams,
+  getMedics,
+  unlinkMedic,
 } from "../controllers/patientsController.js";
 
 const router: Router = express.Router();
@@ -14,5 +16,7 @@ router.get("/", requireAuth, getPatientByEmail);
 router.get("/params", requireAuth, getParams);
 //TODO: this route should be in /medic routes -> /medic/patient/params
 router.post("/params", requireAuth, setParams);
+router.get("/medics", requireAuth, getMedics);
+router.put("/medics/unlink", requireAuth, unlinkMedic);
 
 export default router;
