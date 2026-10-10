@@ -100,4 +100,97 @@ const login = async (req: Request, res: Response) => {
   }
 };
 
-export { login };
+const demoLogin = async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+    //@ts-ignore
+    const supabaseUrl = env.SUPABASE_URL!;
+    //@ts-ignore
+    const supabaseKey = env.SUPABASE_ANON_KEY!;
+    //@ts-ignore
+    const supabaseSecretKey = env.SUPABASE_SECRET_KEY!;
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseSecretKey);
+
+    const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+    const { data: loginWithPasswordData, error: loginWithPasswordError } =
+      await supabaseClient.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+    if (loginWithPasswordError) {
+      console.log(loginWithPasswordError);
+      const error: CustomError = new Error(
+        "Error autenticando usuario Demo"
+      ) as CustomError;
+      error.status = 500;
+      throw error;
+    }
+
+    const fullName = loginWithPasswordData.user.user_metadata.full_name || "";
+    const nameParts = fullName.trim().split(/\s+/);
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ") || "";
+    const userId = loginWithPasswordData.user.id;
+
+    const { data: existingUser, error: checkError } = await supabaseAdmin
+      .from("users")
+      .select("*")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (checkError) {
+      const error: CustomError = new Error(
+        "Error al verificar usuario"
+      ) as CustomError;
+      error.status = 500;
+      throw error;
+    }
+
+    if (!existingUser) {
+      const { error: insertError } = await supabaseAdmin.from("users").insert([
+        {
+          id: userId,
+          email: email,
+          name: firstName,
+          last_name: lastName,
+        },
+      ]);
+
+      if (insertError) {
+        console.log(insertError);
+        const error: CustomError = new Error(
+          "Error insertando usuario"
+        ) as CustomError;
+        error.status = 500;
+        throw error;
+      }
+    }
+
+    const roles = await getRoles(supabaseAdmin, userId);
+
+    return res.status(200).json({
+      accessToken: loginWithPasswordData.session?.access_token,
+      refreshToken: loginWithPasswordData.session?.refresh_token,
+      user: {
+        id: userId,
+        email: loginWithPasswordData.user.email,
+        avatar: "", //TODO: Obtain avatar url from database
+        firstName: existingUser ? existingUser.name : firstName,
+        lastName: existingUser ? existingUser.last_name : lastName,
+        fullName: `${firstName} ${lastName}`,
+      },
+      roles: roles,
+    });
+  } catch (error: any) {
+    console.log(error);
+    return res
+      .status(error.status || 401)
+      .json({ error: error.message || "Unauthorized" });
+  }
+};
+
+export { login, demoLogin };
